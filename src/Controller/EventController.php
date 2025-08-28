@@ -42,7 +42,6 @@ final class EventController extends AbstractController
     }
 
     #[Route('/{id}/modifier', name: '_edit', requirements: ['id' => '\d+'])]
-    #[IsGranted('ROLE_ORGANISATEUR')]
     public function edit(Event $event, Request $request, EntityManagerInterface $em): Response
     {
 
@@ -66,7 +65,7 @@ final class EventController extends AbstractController
     }
 
     #[Route('/{id}/annuler', name: '_cancel')]
-    #[IsGranted('ROLE_ORGANISATEUR')]
+    //#[IsGranted('ROLE_ORGANISATEUR')]
     public function cancel(
         Event                  $event,
         Request                $request,
@@ -74,18 +73,10 @@ final class EventController extends AbstractController
         StateRepository        $stateRepository
     ): Response
     {
-
-
         $form = $this->createForm(EventCancelType::class, $event);
         $form->handleRequest($request);
 
-        if ($event->getStartDateTime() < new \DateTime()) {
-            $this->addFlash('danger', 'Impossible de supprimer la sortie, elle a déjà débuté');
-            return $this->redirectToRoute('home');
-        }
-
         if ($form->isSubmitted() && $form->isValid()) {
-
             $cancelState = $stateRepository->findOneBy(['description' => 'Annulée']);
             $event->setState($cancelState);
 

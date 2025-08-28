@@ -86,16 +86,15 @@
 
 
         {% if app.user %}
-
-            {% if event.state.description == 'Annulée' %}
-                <button class="btn btn-danger" disabled>
-                    Sortie annulée
-                </button>
-            {% elseif event.registeredParticipants.contains(app.user) %}
-                <button class="btn btn-secondary" disabled>
-                    Déjà inscrit
-                </button>
-
+        {% if event.registeredParticipants.contains(app.user) %}
+        <button class="btn btn-secondary" disabled>
+            Déjà inscrit
+        </button>
+        <form method="post" action="{{ path('event_unregister', {id: event.id}) }}">
+            <button class="btn btn-danger">
+                Se désinscrire
+            </button>
+        </form>
             {% elseif event.registeredParticipants|length >= event.maxParticipants %}
                 <button class="btn btn-danger" disabled>
                     Complet
@@ -104,9 +103,11 @@
                 <button class="btn btn-danger" disabled>
                     Date d'inscription dépassée
                 </button>
-
-            {% else %}
-
+            {% elseif state == 'Annulée' %}
+                <button class="btn btn-danger" disabled>
+                    Sortie annulée
+                </button>
+            {% elseif state =='Ouverte' %}
                 <form method="post" action="{{ path('event_register', {id: event.id}) }}">
                     <button type="submit" class="btn btn-primary">
                         S'inscrire
