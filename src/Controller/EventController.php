@@ -149,7 +149,7 @@ final class EventController extends AbstractController
                 ->from(new Address('mailer@campus-eni.fr', 'ENI MAIL BOT'))
                 ->to((string) $user->getEmail())
                 ->subject('Test')
-                ->htmlTemplate('event/email.html.twig')
+                ->htmlTemplate('email/registration-status.html.twig')
                 ->context([
                     'event' => $event,
                     'mode' => 'register'
@@ -159,6 +159,7 @@ final class EventController extends AbstractController
             $mailer->send($email);
 
             $this->addFlash('success', 'Vous êtes bien inscrit.e à la sortie!');
+            return $this->redirectToRoute('schedule_email', ['id' => $event->getId()]);
         }
 
         return $this->redirectToRoute('event_display', ['id' => $event->getId()]);
@@ -177,7 +178,7 @@ final class EventController extends AbstractController
                 ->from(new Address('mailer@campus-eni.fr', 'ENI MAIL BOT'))
                 ->to((string) $user->getEmail())
                 ->subject('Test')
-                ->htmlTemplate('event/email.html.twig')
+                ->htmlTemplate('email/registration-status.html.twig')
                 ->context([
                     'event' => $event,
                     'mode' => 'unregister'

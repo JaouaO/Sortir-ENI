@@ -60,9 +60,16 @@ class Event
     #[ORM\JoinColumn(nullable: false, onDelete: "CASCADE")]
     private ?Site $site = null;
 
+    /**
+     * @var Collection<int, ScheduledEmail>
+     */
+    #[ORM\OneToMany(targetEntity: ScheduledEmail::class, mappedBy: 'event')]
+    private Collection $scheduledEmails;
+
     public function __construct()
     {
         $this->registeredParticipants = new ArrayCollection();
+        $this->scheduledEmails = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -261,5 +268,35 @@ class Event
                 ->atPath('cancelReason')
                 ->addViolation();
         }
+    }
+
+    /**
+     * @return Collection<int, ScheduledEmail>
+     */
+    public function getScheduledEmails(): Collection
+    {
+        return $this->scheduledEmails;
+    }
+
+    public function addScheduledEmail(ScheduledEmail $scheduledEmail): static
+    {
+        if (!$this->scheduledEmails->contains($scheduledEmail)) {
+            $this->scheduledEmails->add($scheduledEmail);
+            $scheduledEmail->setEvent($this);
+        }
+
+        return $this;
+    }
+
+    public function removeScheduledEmail(ScheduledEmail $scheduledEmail): static
+    {
+        if ($this->scheduledEmails->removeElement($scheduledEmail)) {
+            // set the owning side to null (unless already changed)
+            if ($scheduledEmail->getEvent() === $this) {
+                $scheduledEmail->setEvent(null);
+            }
+        }
+
+        return $this;
     }
 }
