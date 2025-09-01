@@ -3,8 +3,8 @@
 namespace App\Controller;
 
 use App\Entity\Site;
+use App\Entity\State;
 use App\Repository\EventRepository;
-use App\Repository\SiteRepository;
 use App\Service\EventService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -29,6 +29,7 @@ final class MainController extends AbstractController
     #[Route(['/', '/accueil'], name: 'home')]
     public function index(Request $request): Response
     {
+        global $state;
         $user = $this->getUser(); //connected user
         $nbRegisteredByEvent = [];
         $isUserEventRegistered = [];
@@ -38,37 +39,39 @@ final class MainController extends AbstractController
 
         $params = $request->query->all();
         //call filters set in EventService
-        $filters = $this->eventService->eventFilter($params, $this->getUser());
+        $filters = $this->eventService->eventFilter($params, $user);
         //call requests in Event Repo
         $events = $this->eventRepository->queryFilters($filters);
-
+        $today = new \DateTimeImmutable();// today
 
         foreach ($events as $event) {
 
-            //get id of the event
             $eventId = $event->getId();
-            //count nb of participants :
-            $nbRegisteredByEvent [$eventId] = $event->getRegisteredParticipants()->count();
+            $nbRegisteredByEvent[$eventId] = $event->getRegisteredParticipants()->count();
+            $isUserEventRegistered[$eventId] = $event->getRegisteredParticipants()->contains($user);
 
-            //check user is event participant "inscrit"
-            if ($event->getRegisteredParticipants()->contains($user)){
-                $isUserEventRegistered[$eventId] = true;
+            // Update status
+            $stateEntity = $this->eventService->determineState($event, $nbRegisteredByEvent, $eventId, $today);
+            if ($stateEntity) {
+                $event->setState($stateEntity);
+                $this->em->persist($event);
             } else {
-                $isUserEventRegistered[$eventId] = false;
+                throw new \RuntimeException("État introuvable pour l'ID donné.");
             }
+            $this->em->flush();
         }
 
 
-        return $this->render('main/index.html.twig', [
-            'user' => $user,
-            'events' => $events,
-            'sites' => $sites,
-            'nbRegisteredByEvent' => $nbRegisteredByEvent,
-            'isUserEventRegistered' => $isUserEventRegistered,
-        ]);
-    }
 
-} 
+            return $this->render('main/index.html.twig', [
+                'user' => $user,
+                'events' => $events,
+                'sites' => $sites,
+                'nbRegisteredByEvent' => $nbRegisteredByEvent,
+                'isUserEventRegistered' => $isUserEventRegistered,
+            ]);
+        }
+}
  
 
  

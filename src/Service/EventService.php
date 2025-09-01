@@ -2,9 +2,18 @@
 
 namespace App\Service;
 
+use App\Entity\State;
 use DateTime;
+use Doctrine\ORM\EntityManagerInterface;
 
 class EventService {
+
+    private EntityManagerInterface $em;
+
+    public function __construct(EntityManagerInterface $em)
+    {
+        $this->em = $em;
+    }
 
     public function eventFilter (array $params, $user) : array {
         $filters = [];
@@ -53,5 +62,30 @@ class EventService {
         return $filters;
     }
 
+    public function determinestate($event, $nbRegisteredByEvent, $eventId, $today): ?State
+    {
+        $startDate = $event->getStartDateTime();
+        $endDate = $event->getEndDateTime();
+        $maxParticipants = $event->getMaxParticipants();
+
+        $stateRepository = $this->em->getRepository(State::class);
+
+        if ($endDate < $today) {
+            // Past events
+            $stateEntity = $stateRepository->find(17);
+        } elseif ($startDate <= $today && $endDate >= $today) {
+            // Ongoing events
+            $stateEntity = $stateRepository->find(16);
+        } elseif ($startDate > $today && $nbRegisteredByEvent[$eventId] >= $maxParticipants) {
+            // closed registrations on coming events
+            $stateEntity = $stateRepository->find(15);
+        } else {
+            // Open registrations on coming events
+            $stateEntity = $stateRepository->find(14);
+        }
+        
+        return $stateEntity;
+        
+    }
 
 }

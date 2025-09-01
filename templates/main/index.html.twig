@@ -83,6 +83,7 @@
                 <tr>
                     <th scope="col">Nom de la sortie</th>
                     <th scope="col">Date de la sortie</th>
+                    <th scope="col">Date de fin de la sortie</th>
                     <th scope="col">Clôture des inscriptions</th>
                     <th scope="col">Inscrits / Places</th>
                     <th scope="col">Etat</th>
@@ -96,19 +97,23 @@
                     <tr>
                         <td>{{ event.name }}</td>
                         <td>{{ event.startDateTime | date("d/m/Y H:i") }}</td>
+                        <td>{{ event.endDateTime | date("d/m/Y H:i") }}</td>
                         <td>{{ event.registrationDeadline | date("d/m/Y H:i") }}</td>
                         <td>{{ nbRegisteredByEvent[event.id] }} / {{ event.maxParticipants }}</td>
-                        <td>{{ event.state.description }}</td>
+                        <td>
+                            {{ event.state.description }}
+                        </td>
                         <td>{{ isUserEventRegistered[event.id] ? 'X' : '' }}</td>
                         <td>
                             <a href="{{ path('user_profile', {id: event.organizer.id}) }}">{{ event.organizer.pseudo }}</a>
                         </td>
                         <td>
+                            {#
                             <a href="{{ path('event_display', {id: event.id}) }}" class="btn btn-sm btn-info me-1">Afficher</a>
                             {% if event.organizer.id == user.id %}
                                 <a href="{{ path('event_edit', {id: event.id}) }}" class="btn btn-sm btn-warning">Modifier</a>
                             {% endif %}
-
+                            #}
                         </td>
                     </tr>
                 {% endfor %}
