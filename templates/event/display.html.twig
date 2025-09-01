@@ -91,6 +91,7 @@
                 <button class="btn btn-danger" disabled>
                     Sortie annulée
                 </button>
+
             {% elseif event.registeredParticipants.contains(app.user) %}
                 <button class="btn btn-secondary" disabled>
                     Déjà inscrit
@@ -100,10 +101,12 @@
                         Se désinscrire
                     </button>
                 </form>
+
             {% elseif event.registeredParticipants|length >= event.maxParticipants %}
                 <button class="btn btn-danger" disabled>
                     Complet
                 </button>
+
             {% elseif event.registrationDeadline <date('now') %}
                 <button class="btn btn-danger" disabled>
                     Date d'inscription dépassée
@@ -115,9 +118,19 @@
                         S'inscrire
                     </button>
                 </form>
+
             {% else %}
                 <p>Une erreur est survenue</p>
             {% endif %}
+
+            {% if is_granted('ROLE_ORGANISATEUR') and state != 'Annulée' and app.user == event.organizer %}
+                <form method="post" action="{{ path('event_cancel', {id: event.id}) }}" class="d-inline">
+                    <button class="btn btn-danger">
+                        Annuler la sortie
+                    </button>
+                </form>
+            {% endif %}
+
         {% else %}
             <a href="{{ path('user_login') }}" class="btn btn-primary">
                 Connectez-vous pour vous inscrire

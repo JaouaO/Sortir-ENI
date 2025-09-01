@@ -16,7 +16,7 @@
 <body>
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container">
-        <a class="navbar-brand" href="#">
+        <a class="navbar-brand" href="{{ path('home') }}">
             <span class="sortir-logo"><i class="bi bi-geo-alt-fill"></i> Sortir.com</span>
         </a>
         <div class="navbar-collapse">
@@ -44,7 +44,7 @@
 
                 {% if is_granted('IS_AUTHENTICATED') %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ path('user_profile', {'id' : 24}) }}"> Mon profil</a>
+                        <a class="nav-link" href="{{ path('user_profile',{'id': app.user.id}) }}"> Mon profil</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ path('user_logout') }}">Déconnexion</a>
@@ -75,6 +75,13 @@
 {% block body %}{% endblock %}
 
 <input type="button" value="page précédente" onclick="javascript:history.back()">
+
+<footer>
+    <div class="container">
+        &copy; Sortir-ENI {{ "now"|date("Y") }}
+    </div>
+</footer>
+
 
 </body>
 </html>

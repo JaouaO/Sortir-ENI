@@ -15,8 +15,10 @@
         <img src="{{ asset('uploads/profile/' ~ user.poster) }}" alt="Photo de {{ user.pseudo }}" width="150">
     {% endif %}
     <br>
-    <a href="{{ path('user_edit',  { id: user.id })}}" class="btn">Modifier</a>
-    <a href="{{ path('home') }}" class="btn">Retour</a>
+
+    {% if is_granted('ROLE_ADMINISTRATEUR') or app.user.id == user.id %}
+        <a href="{{ path('user_edit',  { id: user.id })}}" class="btn">Modifier</a>
+    {% endif %}
 
 {% endblock %}
 

@@ -29,3 +29,20 @@ body {
 form .form-group label {
     font-weight: 500;
 }
+
+.card-body {
+    display: flex;
+    align-items: flex-end;
+    text-align: center;
+
+    justify-content: space-between;
+}
+
+.buttonAndText {
+    display: flex;
+    gap : 20px;
+}
+
+.buttonAndText h5 p {
+    margin: 0;
+}

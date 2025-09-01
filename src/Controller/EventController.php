@@ -8,9 +8,12 @@ use App\Form\EventType;
 use App\Repository\EventRepository;
 use App\Repository\StateRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Address;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -82,8 +85,6 @@ final class EventController extends AbstractController
         StateRepository        $stateRepository
     ): Response
     {
-
-
         $form = $this->createForm(EventCancelType::class, $event);
         $form->handleRequest($request);
 
@@ -92,16 +93,19 @@ final class EventController extends AbstractController
             return $this->redirectToRoute('home');
         }
 
-        if ($form->isSubmitted() && $form->isValid()) {
-
-            $cancelState = $stateRepository->findOneBy(['description' => 'Annulée']);
-            $event->setState($cancelState);
-
-            $em->flush();
-
-            $this->addFlash('danger', 'La sortie a été annulé.');
+        $cancelState = $stateRepository->findOneBy(['description' => 'Annulée']);
+        if (!$cancelState) {
+            $this->addFlash('danger', 'L\'état "Annulée" n\'a pas été trouvé. L\'opération a échoué.');
             return $this->redirectToRoute('home');
         }
+
+        $event->setState($cancelState);
+
+        $em->flush();
+
+        $this->addFlash('success', 'La sortie a été annulée avec succès.');
+
+        return $this->redirectToRoute('home');
 
         return $this->render('event/cancel.html.twig', [
             'event' => $event,
@@ -112,14 +116,14 @@ final class EventController extends AbstractController
     #[Route('/{id}', name: '_display')]
     public function display(Event $event): Response
     {
-
         $state = $event->getState();
 
-        return $this->render('event/display.html.twig', ['event' => $event, 'state' => $state->getDescription()]);
+        return $this->render('event/display.html.twig',
+            ['event' => $event, 'state' => $state->getDescription()]);
     }
 
     #[Route('/{id}/inscription', name: '_register')]
-    public function register(Event $event, EntityManagerInterface $em): Response
+    public function register(Event $event, EntityManagerInterface $em, MailerInterface $mailer): Response
     {
 
         $user = $this->getUser();
@@ -140,20 +144,49 @@ final class EventController extends AbstractController
         }else {
             $event->addRegisteredParticipant($user);
             $em->flush();
+
+            $email = (new TemplatedEmail())
+                ->from(new Address('mailer@campus-eni.fr', 'ENI MAIL BOT'))
+                ->to((string) $user->getEmail())
+                ->subject('Test')
+                ->htmlTemplate('email/registration-status.html.twig')
+                ->context([
+                    'event' => $event,
+                    'mode' => 'register'
+                ])
+            ;
+
+            $mailer->send($email);
+
             $this->addFlash('success', 'Vous êtes bien inscrit.e à la sortie!');
+            return $this->redirectToRoute('schedule_email', ['id' => $event->getId()]);
         }
 
         return $this->redirectToRoute('event_display', ['id' => $event->getId()]);
     }
 
     #[Route('/{id}/desinscription', name: '_unregister')]
-    public function unregister(Event $event, EntityManagerInterface $em): Response
+    public function unregister(Event $event, EntityManagerInterface $em, MailerInterface $mailer): Response
     {
         $user = $this->getUser();
         if ($event->getRegisteredParticipants()->contains($user)) {
             $this->addFlash('warning', 'Vous vous êtes bien désinscrit.e de cette sortie.');
             $event->removeRegisteredParticipant($user);
             $em->flush();
+
+            $email = (new TemplatedEmail())
+                ->from(new Address('mailer@campus-eni.fr', 'ENI MAIL BOT'))
+                ->to((string) $user->getEmail())
+                ->subject('Test')
+                ->htmlTemplate('email/registration-status.html.twig')
+                ->context([
+                    'event' => $event,
+                    'mode' => 'unregister'
+                ])
+            ;
+
+            $mailer->send($email);
+
             return $this->redirectToRoute('event_display', ['id' => $event->getId()]);
         }else{
             $this->addFlash('warning', 'Vous n\'êtes pas inscrit.e à cette sortie.');

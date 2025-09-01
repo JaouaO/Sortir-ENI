@@ -1,0 +1,12 @@
+<h1>Bonjour !</h1>
+
+
+{% if mode == 'register' %}
+<p>Vous vous êtes bien inscrit.e à la sortie {{ event.name }}</p>
+{% else %}
+    <p>Vous n'êtes plus inscrit.e à la sortie {{ event.name }}</p>
+{% endif %}
+<a href="{{ url('event_display',{'id': event.id})}}">Lien vers la sortie</a>
+
+
+<p>à bientôt!</p>
