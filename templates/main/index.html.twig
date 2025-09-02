@@ -3,6 +3,7 @@
 {% block title %}Sortie{% endblock %}
 
 {% block body %}
+<div data-turbo="false">
     <div class="container my-4">
         <h1 class="mb-4">Liste des sorties</h1>
 
@@ -10,12 +11,9 @@
         <div id="filters" class="card mb-4">
             <div class="card-body">
                 <h2 class="h5 mb-3">Filtrer les sorties</h2>
-
                 <form method="get" action="{{ path('home') }}">
                     <div class="row gy-3">
                         <section class="col-md-5">
-
-                            <!-- Site -->
                             <div class="mb-3">
                                 <label for="siteList" class="form-label">Site :</label>
                                 <select name="site" id="siteList" class="form-select">
@@ -25,99 +23,227 @@
                                     {% endfor %}
                                 </select>
                             </div>
-
-                            <!-- Recherche -->
                             <div class="mb-3">
                                 <label for="searchInput" class="form-label">Le nom de la sortie contient :</label>
                                 <input type="search" id="searchInput" name="search" value="{{ app.request.query.get('search') }}" placeholder="Rechercher par nom" class="form-control" />
                             </div>
-
-                            <!-- Date -->
                             <div class="mb-3">
                                 <label class="form-label d-block">Entre :</label>
                                 <div class="d-flex align-items-center gap-2">
-                                    <input type="date" name="dateStart" value="{{ app.request.query.get('dateStart') }}" id="date-start" class="form-control" />
+                                    <input type="date" name="dateStart" value="{{ app.request.query.get('dateStart') }}" class="form-control" />
                                     <span>Et</span>
-                                    <input type="date" name="dateEnd" value="{{ app.request.query.get('dateEnd') }}" id="date-end" class="form-control" />
+                                    <input type="date" name="dateEnd" value="{{ app.request.query.get('dateEnd') }}" class="form-control" />
                                 </div>
                             </div>
                         </section>
-
                         <section class="col-md-4">
-
-                            <!-- Checkboxes -->
                             <div class="form-check mb-2">
                                 <input type="checkbox" id="outingOrganizer" name="organizer" class="form-check-input" {% if app.request.query.get('organizer') is not empty %}checked{% endif %} />
                                 <label for="outingOrganizer" class="form-check-label">Sorties dont je suis l'organisateur/trice</label>
                             </div>
-
                             <div class="form-check mb-2">
                                 <input type="checkbox" id="outingRegistered" name="registered" value="1" class="form-check-input" {% if app.request.get('registered') %}checked{% endif %} />
                                 <label for="outingRegistered" class="form-check-label">Sorties auxquelles je suis inscrit/e</label>
                             </div>
-
                             <div class="form-check mb-2">
                                 <input type="checkbox" id="outingNotRegistered" name="notRegistered" value="1" class="form-check-input" {% if app.request.get('not_registered') %}checked{% endif %} />
                                 <label for="outingNotRegistered" class="form-check-label">Sorties auxquelles je ne suis pas inscrit/e</label>
                             </div>
-
                             <div class="form-check mb-3">
                                 <input type="checkbox" id="outingPast" name="outingPast" class="form-check-input" />
                                 <label for="outingPast" class="form-check-label">Sorties passées</label>
                             </div>
                         </section>
                         <section class="col-md-3">
-                            <!-- Submit -->
                             <button type="submit" class="btn btn-primary btn-lg">Rechercher</button>
-
                         </section>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- tableau d'events -->
-        <div class="table-responsive">
-            <table id="array" class="table table-striped table-bordered table-hover">
-                <thead class="table-light">
-                <tr>
-                    <th scope="col">Nom de la sortie</th>
-                    <th scope="col">Date de la sortie</th>
-                    <th scope="col">Clôture des inscriptions</th>
-                    <th scope="col">Inscrits / Places</th>
-                    <th scope="col">Etat</th>
-                    <th scope="col">Inscrit</th>
-                    <th scope="col">Organisateur</th>
-                    <th scope="col">Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for event in events %}
-                    <tr>
-                        <td>{{ event.name }}</td>
-                        <td>{{ event.startDateTime | date("d/m/Y H:i") }}</td>
-                        <td>{{ event.registrationDeadline | date("d/m/Y H:i") }}</td>
-                        <td>{{ nbRegisteredByEvent[event.id] }} / {{ event.maxParticipants }}</td>
-                        <td>{{ event.state.description }}</td>
-                        <td>{{ isUserEventRegistered[event.id] ? 'X' : '' }}</td>
-                        <td>
-                            <a href="{{ path('user_profile', {id: event.organizer.id}) }}">{{ event.organizer.pseudo }}</a>
-                        </td>
-                        <td>
-                            <a href="{{ path('event_display', {id: event.id}) }}" class="btn btn-sm btn-info me-1">Afficher</a>
-                            {% if event.organizer.id == user.id %}
-                                <a href="{{ path('event_edit', {id: event.id}) }}" class="btn btn-sm btn-warning">Modifier</a>
-                            {% endif %}
+        <!-- Onglets Liste / Calendrier -->
+        <ul class="nav nav-tabs mb-3" id="eventTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="list-tab" data-bs-toggle="tab" data-bs-target="#listView" type="button" role="tab">
+                    Liste
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="calendar-tab" data-bs-toggle="tab" data-bs-target="#calendarView" type="button" role="tab">
+                    Calendrier
+                </button>
+            </li>
+        </ul>
 
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        <div class="tab-content" id="eventTabsContent">
+            <!-- Vue Liste complète -->
+            <div class="tab-pane fade show active" id="listView" role="tabpanel" aria-labelledby="list-tab">
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered table-hover">
+                        <thead class="table-light">
+                        <tr>
+                            <th>Nom de la sortie</th>
+                            <th>Date de la sortie</th>
+                            <th>Clôture des inscriptions</th>
+                            <th>Inscrits / Places</th>
+                            <th>Etat</th>
+                            <th>Inscrit</th>
+                            <th>Organisateur</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for event in events %}
+                            <tr>
+                                <td>{{ event.name }}</td>
+                                <td>{{ event.startDateTime|date("d/m/Y H:i") }} - {{ event.endDateTime|date("d/m/Y H:i") }}</td>
+                                <td>{{ event.registrationDeadline|date("d/m/Y H:i") }}</td>
+                                <td>{{ nbRegisteredByEvent[event.id] }} / {{ event.maxParticipants }}</td>
+                                <td>{{ event.state.description }}</td>
+                                <td>{{ isUserEventRegistered[event.id] ? 'X' : '' }}</td>
+                                <td><a href="{{ path('user_profile', {id: event.organizer.id}) }}">{{ event.organizer.pseudo }}</a></td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                    <a href="{{ path('event_display', {id: event.id}) }}" class="btn btn-sm btn-info me-1">Afficher</a>
+                                    {% if event.organizer.id == user.id or is_granted('ROLE_ADMINISTRATEUR') %}
+                                        <a href="{{ path('event_edit', {id: event.id}) }}" class="btn btn-sm btn-warning">Modifier</a>
+                                    {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Vue Calendrier avec navigation mois -->
+            <div id="calendarContainer" data-turbo="false">
+                <div class="tab-pane fade" id="calendarView" role="tabpanel" aria-labelledby="calendar-tab">
+                    <div class="d-flex justify-content-between mb-2">
+                        <button id="prevMonth" class="btn btn-secondary">‹ Mois précédent</button>
+                        <strong id="currentMonth"></strong>
+                        <button id="nextMonth" class="btn btn-secondary">Mois suivant ›</button>
+                    </div>
+                    <div id="calendar" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center;"></div>
+                </div>
+            </div>
 
         <div class="mt-3">
             <a href="{{ path('event_create') }}" class="btn btn-success">Créer une sortie</a>
         </div>
     </div>
+    </div>
+        <script>
+        function checkAndInitCalendar() {
+        const calendarEl = document.getElementById('calendar');
+        if (!calendarEl) return;
+
+        // Vérifier si le calendrier a déjà été initialisé
+        if (calendarEl.dataset.initialized) return;
+
+        try {
+        const events = [
+        {% for event in events %}
+            {
+            url: '{{ path('event_display', {'id': event.id}) }}',
+            name: '{{ event.name|e('js') }}',
+            startDateTime: '{{ event.startDateTime|date("Y-m-d H:i:s") }}',
+            endDateTime: '{{ event.endDateTime|date("Y-m-d H:i:s") }}',
+            state: '{{ event.state.description|e('js') }}'
+            },
+        {% endfor %}
+        ];
+
+        let today = new Date();
+        let currentMonth = today.getMonth();
+        let currentYear = today.getFullYear();
+
+        const currentMonthLabel = document.getElementById('currentMonth');
+
+        function getEventColor(state) {
+        if(state === 'Annulée') return '#dc3545';
+        if(state === 'Ouverte') return '#198754';
+        return '#0d6efd';
+        }
+
+        function renderCalendar(month, year) {
+        calendarEl.innerHTML = '';
+        const firstDay = new Date(year, month, 1);
+        const startDay = firstDay.getDay();
+        const lastDay = new Date(year, month + 1, 0).getDate();
+
+        currentMonthLabel.textContent = firstDay.toLocaleString('fr-FR', { month: 'long', year: 'numeric' });
+
+        for(let i = 0; i < startDay; i++) calendarEl.appendChild(document.createElement('div'));
+
+        for(let day = 1; day <= lastDay; day++) {
+        const cell = document.createElement('div');
+        cell.style.border = '1px solid #ccc';
+        cell.style.padding = '10px';
+        cell.style.minHeight = '80px';
+
+        const dayHeader = document.createElement('strong');
+        dayHeader.textContent = day;
+        cell.appendChild(dayHeader);
+
+        const currentDayStart = new Date(year, month, day, 0, 0, 0);
+        const currentDayEnd = new Date(year, month, day, 23, 59, 59);
+
+        events.forEach(event => {
+        const eventStart = new Date(event.startDateTime);
+        const eventEnd = new Date(event.endDateTime);
+
+        if(eventStart <= currentDayEnd && eventEnd >= currentDayStart) {
+        const ev = document.createElement('div');
+        ev.textContent = event.name;
+        ev.style.backgroundColor = getEventColor(event.state);
+        ev.style.color = '#fff';
+        ev.style.marginTop = '2px';
+        ev.style.cursor = 'pointer';
+        ev.style.fontSize = '0.8rem';
+        ev.style.padding = '2px';
+        // Forcer un vrai rechargement de page au clic
+        ev.onclick = () => {
+        window.location.href = event.url;
+        };
+        cell.appendChild(ev);
+        }
+        });
+
+        calendarEl.appendChild(cell);
+        }
+        }
+
+        document.getElementById('prevMonth').addEventListener('click', () => {
+        currentMonth--;
+        if(currentMonth < 0) { currentMonth = 11; currentYear--; }
+        renderCalendar(currentMonth, currentYear);
+        });
+
+        document.getElementById('nextMonth').addEventListener('click', () => {
+        currentMonth++;
+        if(currentMonth > 11) { currentMonth = 0; currentYear++; }
+        renderCalendar(currentMonth, currentYear);
+        });
+
+        renderCalendar(currentMonth, currentYear);
+        calendarEl.dataset.initialized = true;
+        console.log("Calendrier initialisé avec succès");
+
+        } catch (error) {
+        console.error("Erreur calendrier:", error);
+        // Forcer le rechargement si problème
+        setTimeout(() => window.location.reload(), 1000);
+        }
+        }
+
+        // Essayer immédiatement et toutes les secondes
+        checkAndInitCalendar();
+        setInterval(checkAndInitCalendar, 1000);
+        document.addEventListener('click', checkAndInitCalendar);
+        </script>
+
+
 {% endblock %}

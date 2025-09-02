@@ -52,7 +52,7 @@ class RegistrationFormType extends AbstractType
                 ]
             ])
         ;
-        if($option['include_password_and_terms'] ?? false) {
+        if($options['include_password_and_terms'] ?? false) {
             $builder
                 ->add('agreeTerms', CheckboxType::class, [
                     'mapped' => false,

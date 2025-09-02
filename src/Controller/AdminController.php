@@ -8,10 +8,13 @@ use App\Form\UserImportType;
 use App\Repository\EventRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Address;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -29,11 +32,31 @@ final class AdminController extends AbstractController
     }
 
     #[Route('/{id}/desactiver', name: '_desactivate')]
-    public function desactivate(User $user, EntityManagerInterface $em): Response
+    public function desactivate(User $user, EntityManagerInterface $em,  MailerInterface $mailer): Response
     {
 
         $user->setIsActive(false);
+
+        foreach ($user->getRegisteredEvents() as $event) {
+            $event->removeRegisteredParticipant($user);
+        }
+
+
+        $email = (new TemplatedEmail())
+            ->from(new Address('mailer@campus-eni.fr', 'ENI MAIL BOT'))
+            ->to((string) $user->getEmail())
+            ->subject('You have been deactivated')
+            ->htmlTemplate('email/deactivate.html.twig')
+            ->context([
+                'user' => $user,
+            ])
+          ;
+
+        $mailer->send($email);
+
         $em->flush();
+
+
 
         $this->addFlash('success', "L'utilisateur {$user->getName()} a bien été désactivé.");
         return $this->redirectToRoute('admin_interface');

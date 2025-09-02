@@ -176,6 +176,8 @@ final class EventController extends AbstractController
             throw $this->createAccessDeniedException('Vous devez être connecté.e pour vous inscrire.');
         }
 
+        $email = $user->getEmail();
+
         if ($event->getRegisteredParticipants()->contains($user)) {
             $this->addFlash('warning', 'Vous êtes déjà inscrit.e à cette sortie.');
         } elseif (count($event->getRegisteredParticipants()) >= $event->getMaxParticipants()) {
@@ -184,7 +186,9 @@ final class EventController extends AbstractController
             $this->addFlash('danger', 'La date limite d’inscription est passée.');
         }elseif ($state->getDescription() == 'Annulée') {
             $this->addFlash('danger', 'La sortie a été annullée.');
-        }else {
+        } elseif (!str_ends_with($email, '@campus-eni.fr')) {
+            $this->addFlash('danger', 'Ce n\'est pas une adresse : @campus-eni.fr' );
+        } else {
             $event->addRegisteredParticipant($user);
             $em->flush();
 

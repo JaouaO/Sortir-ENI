@@ -16,6 +16,23 @@ class SiteRepository extends ServiceEntityRepository
         parent::__construct($registry, Site::class);
     }
 
+    public function findSites(?string $searchSite): array
+    {
+        $qb = $this->createQueryBuilder('c');
+
+        // expr() permet de générer des requètes tel que LIKE, AND, OR, BETWEEN
+
+        if ($searchSite) {
+            $qb->where($qb->expr()->like('c.name', ':site'))
+                ->setParameter('site', '%' . $searchSite . '%');
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+
+
+
     //    /**
     //     * @return Site[] Returns an array of Site objects
     //     */

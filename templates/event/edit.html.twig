@@ -9,217 +9,147 @@
 
 {% block javascripts %}
     {{ parent() }}
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" ></script>
-
-
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 {% endblock %}
 
-
 {% block body %}
-    <div class="container mt-4">
-        {% if mode == 'create' %}
-            <h1 class="mb-4">Créer une nouvelle sortie</h1>
-        {% else %}
-            <h1 class="mb-4">Mettre à jour la sortie</h1>
-        {% endif %}
+    <div>
+        <div class="container mt-4">
+            {% if mode == 'create' %}
+                <h1 class="mb-4">Créer une nouvelle sortie</h1>
+            {% else %}
+                <h1 class="mb-4">Mettre à jour la sortie</h1>
+            {% endif %}
 
-        <div class="row justify-content-center">
-            <div class="col-md-8">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="card shadow-sm p-4">
+                        {{ form_start(event_form, { 'attr': { 'class': 'needs-validation' } }) }}
+                        {{ form_row(event_form.name) }}
+                        {{ form_row(event_form.startDateTime) }}
+                        {{ form_row(event_form.endDateTime) }}
+                        {{ form_row(event_form.registrationDeadline) }}
+                        {{ form_row(event_form.maxParticipants) }}
+                        {{ form_row(event_form.eventInfo) }}
+                        {{ form_row(event_form.site) }}
+                        {{ form_row(event_form.place) }}
+                        <div id="newPlaceStreetWrapper" style="display:none;">
+                            <h5>Ajouter un nouveau lieu</h5>
+                            {{ form_row(event_form.newPlace) }}
+                            {{ form_row(event_form.newPlaceCity) }}
+                            {{ form_row(event_form.newPlaceStreet) }}
+                        </div>
+                        {{ form_row(event_form.newPlaceLat) }}
+                        {{ form_row(event_form.newPlaceLng) }}
+                        <div class="text-danger mt-2">
+                            {{ form_errors(event_form.newPlaceLat) }}
+                        </div>
+                        <div id="map" style="height:400px;"></div>
 
-
-                <div class="card shadow-sm p-4">
-                    {{ form_start(event_form, { 'attr': { 'class': 'needs-validation' } }) }}
-                    {{ form_row(event_form.name) }}
-                    {{ form_row(event_form.startDateTime) }}
-                    {{ form_row(event_form.endDateTime) }}
-                    {{ form_row(event_form.registrationDeadline) }}
-                    {{ form_row(event_form.maxParticipants) }}
-                    {{ form_row(event_form.eventInfo) }}
-                    {{ form_row(event_form.site) }}
-                    {{ form_row(event_form.place) }}
-                    <div id="newPlaceStreetWrapper" style="display:none;">
-                        <h5>Ajouter un nouveau lieu</h5>
-                        {{ form_row(event_form.newPlace) }}
-                        {{ form_row(event_form.newPlaceCity) }}
-                        {{ form_row(event_form.newPlaceStreet) }}
-                    </div>
-                    {{ form_row(event_form.newPlaceLat) }}
-                    {{ form_row(event_form.newPlaceLng) }}
-                    <div class="text-danger mt-2">
-                        {{ form_errors(event_form.newPlaceLat) }}
-                    </div>
-                    <div id="map" style="height:400px;"></div>
-
-
-
-                    <div class="text-center mt-4">
-                        <button type="submit" class="btn btn-primary">
-                            {{ mode == 'create' ? 'Créer' : 'Mettre à jour' }}
-                        </button>
+                        <div class="text-center mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                {{ mode == 'create' ? 'Créer' : 'Mettre à jour' }}
+                            </button>
+                        </div>
+                        {{ form_end(event_form) }}
                     </div>
                 </div>
-
-
-                {{ form_end(event_form) }}
             </div>
         </div>
-
-
     </div>
+    <script>
+        (function() {
+            let map = null;
+            let marker = null;
+            let initialized = false;
 
+            function initLeaflet() {
+                if (initialized) return;
+                const mapEl = document.getElementById('map');
+                if (!mapEl) return;
+                if (typeof L === 'undefined') return;
 
-    <script>// Déclarer les variables en dehors de la fonction pour qu'elles soient accessibles globalement
-        let map = null;
-        let marker = null;
-        let placeSelect = null;
-        let streetWrapper = null;
+                console.log("Initialisation de Leaflet...");
 
-        function initializeMap() {
-            console.log("Initialisation de la carte...");
+                // Variables pour le formulaire
+                const placeSelect = document.querySelector('#{{ event_form.place.vars.id }}');
+                const streetWrapper = document.querySelector('#newPlaceStreetWrapper');
 
-            // Réinitialiser les variables si elles existent déjà
-            if (map) {
-                map.remove();
-                map = null;
-            }
-            marker = null;
+                function toggleStreetField() {
+                    if (placeSelect && placeSelect.value) {
+                        streetWrapper.style.display = 'none';
+                    } else {
+                        streetWrapper.style.display = 'block';
+                    }
+                }
 
-            // Vérifier que Leaflet est chargé
-            if (typeof L === 'undefined') {
-                console.error("Leaflet n'est pas chargé!");
-                return;
-            }
+                if (placeSelect && streetWrapper) {
+                    toggleStreetField();
+                    placeSelect.addEventListener('change', toggleStreetField);
+                }
 
-            // Vérifier que le conteneur de la carte existe
-            const mapContainer = document.getElementById('map');
-            if (!mapContainer) {
-                console.error("Conteneur de carte non trouvé!");
-                return;
-            }
+                // Créer la carte
+                map = L.map('map').setView([47.2184, 1.6536], 6);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(map);
 
-            // Initialiser les éléments du formulaire
-            placeSelect = document.querySelector('#{{ event_form.place.vars.id }}');
-            streetWrapper = document.querySelector('#newPlaceStreetWrapper');
+                function setMarker(lat, lng) {
+                    if (marker) map.removeLayer(marker);
+                    marker = L.marker([lat, lng]).addTo(map);
+                    map.setView([lat, lng], 15);
+                }
 
-            function toggleStreetField() {
                 if (placeSelect && placeSelect.value) {
-                    streetWrapper.style.display = 'none';
-                } else {
-                    streetWrapper.style.display = 'block';
+                    const selectedOption = placeSelect.selectedOptions[0];
+                    const lat = selectedOption.dataset.lat;
+                    const lng = selectedOption.dataset.lng;
+                    if (lat && lng) setMarker(lat, lng);
                 }
-            }
 
-            if (placeSelect && streetWrapper) {
-                toggleStreetField();
-                placeSelect.addEventListener('change', toggleStreetField);
-            }
-
-            // Créer la carte
-            map = L.map('map').setView([47.2184, 1.6536], 6);
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(map);
-
-            function setMarker(lat, lng) {
-                if (marker) map.removeLayer(marker);
-                marker = L.marker([lat, lng]).addTo(map);
-                map.setView([lat, lng], 15);
-            }
-
-            // Initialiser le marqueur si un lieu est sélectionné
-            if (placeSelect && placeSelect.value) {
-                const selectedOption = placeSelect.selectedOptions[0];
-                const lat = selectedOption.dataset.lat;
-                const lng = selectedOption.dataset.lng;
-                if (lat && lng) {
-                    setMarker(lat, lng);
-                }
-            }
-
-            // Gérer le changement de lieu
-            if (placeSelect) {
-                placeSelect.addEventListener('change', function () {
+                placeSelect?.addEventListener('change', () => {
                     const selectedOption = placeSelect.selectedOptions[0];
                     const lat = selectedOption.dataset.lat;
                     const lng = selectedOption.dataset.lng;
                     if (lat && lng) {
                         setMarker(lat, lng);
-                    } else {
-                        if (marker) map.removeLayer(marker);
+                    } else if (marker) {
+                        map.removeLayer(marker);
                         marker = null;
                         map.setView([46.603354, 1.888334], 6);
                     }
+                    toggleStreetField();
+                });
 
-                    // Mettre à jour le champ de rue
-                    if (streetWrapper) {
-                        toggleStreetField();
+                map.on('click', function (e) {
+                    if (placeSelect && placeSelect.value) return;
+                    if (marker) map.removeLayer(marker);
+                    marker = L.marker(e.latlng).addTo(map);
+
+                    const latInput = document.querySelector('#{{ event_form.newPlaceLat.vars.id }}');
+                    const lngInput = document.querySelector('#{{ event_form.newPlaceLng.vars.id }}');
+                    if (latInput && lngInput) {
+                        latInput.value = e.latlng.lat;
+                        lngInput.value = e.latlng.lng;
                     }
                 });
+
+                initialized = true;
+                console.log("Carte initialisée avec succès !");
             }
 
-            // Gérer les clics sur la carte
-            map.on('click', function (e) {
-                if (placeSelect && placeSelect.value) return;
-                if (marker) map.removeLayer(marker);
-                marker = L.marker(e.latlng).addTo(map);
+            // Essayer d'initialiser immédiatement
+            initLeaflet();
 
-                const latInput = document.querySelector('#{{ event_form.newPlaceLat.vars.id }}');
-                const lngInput = document.querySelector('#{{ event_form.newPlaceLng.vars.id }}');
+            // Re-vérifier toutes les 300ms si Leaflet n'était pas prêt
+            const intervalId = setInterval(() => {
+                if (!initialized) initLeaflet();
+                else clearInterval(intervalId);
+            }, 300);
 
-                if (latInput && lngInput) {
-                    latInput.value = e.latlng.lat;
-                    lngInput.value = e.latlng.lng;
-                }
-            });
-        }
-
-        // Nettoyer la carte avant la navigation Turbo
-        function cleanupMap() {
-            if (map) {
-                map.remove();
-                map = null;
-            }
-            marker = null;
-            placeSelect = null;
-            streetWrapper = null;
-        }
-
-        // Écouter les événements Turbo
-        document.addEventListener('turbo:load', function() {
-            console.log('Turbo load - initialisation de la carte');
-            initializeMap();
-        });
-
-        document.addEventListener('turbo:render', function() {
-            console.log('Turbo render - réinitialisation de la carte');
-            initializeMap();
-        });
-
-        document.addEventListener('turbo:before-visit', function() {
-            console.log('Turbo before-visit - nettoyage de la carte');
-            cleanupMap();
-        });
-
-        document.addEventListener('turbo:before-render', function() {
-            console.log('Turbo before-render - nettoyage de la carte');
-            cleanupMap();
-        });
-
-        // Écouter aussi l'événement DOMContentLoaded pour les navigations normales
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOMContentLoaded - initialisation de la carte');
-            initializeMap();
-        });
-
-        // Gérer le démontage lorsque la page est quittée
-        document.addEventListener('turbo:before-cache', function() {
-            console.log('Turbo before-cache - nettoyage de la carte');
-            cleanupMap();
-        });
+            // Pour être sûr sur Turbo ou navigation classique
+            document.addEventListener('DOMContentLoaded', initLeaflet);
+        })();
     </script>
 
-
 {% endblock %}
-
-

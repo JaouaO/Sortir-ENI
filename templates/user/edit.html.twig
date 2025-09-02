@@ -26,6 +26,7 @@
             {% if user.id %}
                 <button type="submit" class="btn-edit">Enregistrer les modifications</button>
             {% endif %}
+            {{ form_rest(form) }}
 
             {{ form_end(form, { 'render_rest': false }) }}
         </div>

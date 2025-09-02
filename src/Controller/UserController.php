@@ -140,10 +140,10 @@ final class UserController extends AbstractController
         FileUploader           $fileUploader,
         ParameterbagInterface  $parameterBag,
         User                   $userProfile,
-        AdminController        $admin,
-
     ): Response
     {
+        $userLogged = $this->getUser();
+
 
         $userLogged = $this->getUser();
 
@@ -155,6 +155,7 @@ final class UserController extends AbstractController
             'include_password_and_terms' => false,
          ]);
         $form->handleRequest($request);
+
 
         if ($form->isSubmitted() && $form->isValid()) {
             $file = $form->get('poster_file')->getData();
@@ -172,19 +173,20 @@ final class UserController extends AbstractController
                 $userProfile->setPoster($name);
             }
 
-           $em->persist($userProfile);
 
             $em->flush();
             $this->addFlash('success', 'Profil mis à jour !');
 
-            return $this->redirectToRoute('user_edit', ['id' => $userProfile->getId()]);
+            return $this->redirectToRoute('user_profile', ['id' => $userProfile->getId()]);
         }
 
         return $this->render('user/edit.html.twig', [
-            'form' => $form->createView(),
+
+            'form' => $form,
             'user' => $userProfile,
         ]);
     }
+
 
 
 }
